@@ -1,6 +1,8 @@
 import asyncHandler from "../middleware/asyncHandler.js";
 import Product from "../model/productModel.js";
 import { errorJson } from "../utils/errorHandler.js";
+import { v2 as cloudinary } from "cloudinary";
+import streamifier from "streamifier";
 
 export const getAllProduct = asyncHandler(async (req, res) => {
   // const products = await Product.find();
@@ -100,18 +102,46 @@ export const deleteProduct = asyncHandler(async (req, res) => {
 });
 
 export const fileUpload = asyncHandler(async (req, res) => {
-  const file = req.file;
+  // const file = req.file;
 
-  if (!file) {
-    res.status(400);
-    throw new Error("tidak ada file yang di input");
-  }
+  // if (!file) {
+  //   res.status(400);
+  //   throw new Error("tidak ada file yang di input");
+  // }
 
-  const imgFileName = file.filename;
-  const pathImg = `/img/${imgFileName}`;
+  // const imgFileName = file.filename;
+  // const pathImg = `/img/${imgFileName}`;
 
-  res.status(200).json({
-    message: "image berhasil diupload",
-    image: pathImg,
-  });
+  const stream = cloudinary.uploader.upload_stream(
+    {
+      folder: "img",
+      allowed_format: ["jpg", "jpeg", "png", "svg"],
+    },
+    function (err, result) {
+      if (err) {
+        console.log(err);
+        return res.status(500).json({
+          message: "gagal upload image",
+          error: err,
+        });
+      }
+
+      const imageUrl = cloudinary.url(result.public_id, {
+        fetch_format: "auto",
+        quality: "auto",
+        crop: "auto",
+        gravity: "auto",
+        width: 400,
+        height: 400,
+      });
+
+      res.status(201).json({
+        message: "gambar berhasil diupload",
+        // url: result.secure_url,
+        url: imageUrl,
+      });
+    }
+  );
+
+  streamifier.createReadStream(req.file.buffer).pipe(stream);
 });

@@ -7,11 +7,20 @@ import mongoose from "mongoose";
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 import helmet from "helmet";
 import ExpressMongoSanitize from "express-mongo-sanitize";
+import { v2 as cloudinary } from "cloudinary";
 
 dotenv.config();
 
 const app = express();
 const port = 3000;
+
+//cloudinary
+// config
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.API_KEY,
+  api_secret: process.env.API_SECRET,
+});
 
 app.use(express.json());
 app.use(helmet());

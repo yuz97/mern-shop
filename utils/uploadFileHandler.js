@@ -7,25 +7,27 @@ const FILE_TYPE = {
   "image/jpeg": "jpeg",
 };
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const isFileFormat = FILE_TYPE[file.mimetype];
-    let uploadErr = new Error("invalid format image,choose another");
+// const storage = multer.diskStorage({
+//   destination: function (req, file, cb) {
+//     const isFileFormat = FILE_TYPE[file.mimetype];
+//     let uploadErr = new Error("invalid format image,choose another");
 
-    if (isFileFormat) {
-      uploadErr = null;
-    }
+//     if (isFileFormat) {
+//       uploadErr = null;
+//     }
 
-    cb(uploadErr, "public/img");
-  },
-  filename: function (req, file, cb) {
-    const uniqueFile = `${file.fieldname}-${Date.now()}${path.extname(
-      file.originalname
-    )}`;
+//     cb(uploadErr, "public/img");
+//   },
+//   filename: function (req, file, cb) {
+//     const uniqueFile = `${file.fieldname}-${Date.now()}${path.extname(
+//       file.originalname
+//     )}`;
 
-    cb(null, uniqueFile);
-  },
-});
+//     cb(null, uniqueFile);
+//   },
+// });
+
+const storage = multer.memoryStorage();
 
 const upload = multer({ storage });
 
