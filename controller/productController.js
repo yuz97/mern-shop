@@ -18,23 +18,29 @@ export const getAllProduct = asyncHandler(async (req, res) => {
 
   //pagination
   const page = req.query.page * 1 || 1;
-  const limitData = req.query.limit * 1 || 30;
+  const limitData = req.query.limit * 1 || 3;
   const skipData = (page - 1) * limitData;
 
   query = await query.skip(skipData).limit(limitData);
 
+  const countProduct = await Product.countDocuments(queryObj);
   if (req.query.page) {
-    const numProduct = await Product.countDocuments();
-    if (skipData >= numProduct) {
+    if (skipData >= countProduct) {
       res.status(400);
       throw new Error("this page doesn't exists");
     }
   }
 
   const data = await query;
+  const totalPage = Math.ceil(countProduct / limitData);
 
   return res.status(200).json({
     data,
+    pagination: {
+      totalPage,
+      page,
+      totalProduct: countProduct,
+    },
   });
 });
 
