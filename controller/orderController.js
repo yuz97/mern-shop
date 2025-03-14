@@ -136,8 +136,8 @@ export const handlerNotification = asyncHandler(async (req, res) => {
     throw new Error("order tidak ditemukan");
   }
 
-  if (transactionStatus == "capture" || transactionStatus == "settlemnt") {
-    if (fraudStatus == "accept") {
+  if (fraudStatus == "accept" || fraudStatus == "settlemnt") {
+    if (transactionStatus == "capture") {
       const orderProduct = orderData.cartItem;
 
       for (const item of orderProduct) {
@@ -151,11 +151,12 @@ export const handlerNotification = asyncHandler(async (req, res) => {
         productData.stock = productData.stock - item.quantity;
         await productData.save();
       }
-      orderData.status = "success";
     }
-  } else if (["cancle", "denied", "expired"].includes(transactionStatus)) {
+
+    orderData.status = "success";
+  } else if (["cancle", "denied", "expired"].includes(fraudStatus)) {
     orderData.status = "failed";
-  } else if (transactionStatus == "pending") {
+  } else if (fraudStatus == "pending") {
     orderData.status = "pending";
   }
 
