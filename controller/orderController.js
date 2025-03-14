@@ -136,39 +136,29 @@ export const handlerNotification = asyncHandler(async (req, res) => {
     throw new Error("order tidak ditemukan");
   }
 
-  const orderProduct = orderData.cartItem;
-  const updateStock = async (itemProduct) => {
-    const productData = await Product.findById(itemProduct.product);
+  if (transactionStatus == "capture" || transactionStatus == "settlemnt") {
+    if (fraudStatus == "accept") {
+      const orderProduct = orderData.cartItem;
 
-    if (!productData) {
-      res.status(400);
-      throw new Error("Product not found");
-    }
+      for (const item of orderProduct) {
+        const productData = await Product.findById(item.product);
 
-    productData.stock -= itemProduct.quantity;
+        if (!productData) {
+          res.status(400);
+          throw new Error("order tidak ditemukan");
+        }
 
-    await productData.save();
-  };
-
-  const handleTransaction = async () => {
-    if (transactionStatus === "capture" && fraudStatus === "accept") {
-      // Process successful payment
-      await Promise.all(orderProduct.map(updateStock));
+        productData.stock = productData.stock - item.quantity;
+        await productData.save();
+      }
       orderData.status = "success";
-    } else if (transactionStatus === "settlement") {
-      // Process settlement
-      await Promise.all(orderProduct.map(updateStock));
-      orderData.status = "success";
-    } else if (["cancel", "deny", "expire"].includes(transactionStatus)) {
-      // Handle failure statuses
-      orderData.status = "failed";
-    } else if (transactionStatus === "pending") {
-      // Handle pending status
-      orderData.status = "pending";
     }
-  };
+  } else if (["cancle", "denied", "expired"].includes(transactionStatus)) {
+    orderData.status = "failed";
+  } else if (transactionStatus == "pending") {
+    orderData.status = "pending";
+  }
 
-  await handleTransaction();
   await orderData.save();
 
   return res.status(200).send("Payment notification is success!");
