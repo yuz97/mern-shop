@@ -129,15 +129,15 @@ export const handlerNotification = asyncHandler(async (req, res) => {
   let transactionStatus = statusResponse.transaction_status;
   let fraudStatus = statusResponse.fraud_status;
 
-  const orderData = await Order.findById({ orderId });
+  const orderData = await Order.findById(orderId);
 
   if (!orderData) {
     res.status(400);
     throw new Error("order tidak ditemukan");
   }
 
-  if (fraudStatus == "accept" || fraudStatus == "settlemnt") {
-    if (transactionStatus == "capture") {
+  if (transactionStatus == "capture" || transactionStatus == "settlement") {
+    if (fraudStatus == "accept") {
       const orderProduct = orderData.cartItem;
 
       for (const item of orderProduct) {
@@ -154,9 +154,9 @@ export const handlerNotification = asyncHandler(async (req, res) => {
     }
 
     orderData.status = "success";
-  } else if (["cancle", "denied", "expired"].includes(fraudStatus)) {
+  } else if (["cancle", "expire", "deny"].includes(transactionStatus)) {
     orderData.status = "failed";
-  } else if (fraudStatus == "pending") {
+  } else if (transactionStatus == "pending") {
     orderData.status = "pending";
   }
 
