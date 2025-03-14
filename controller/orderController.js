@@ -41,12 +41,18 @@ export const createOrder = asyncHandler(async (req, res) => {
       throw new Error("id product tidak ditemukan");
     }
 
-    const { name, price, _id } = productData;
+    const { name, price, _id, stock } = productData;
+
+    if (cart.quantity > stock) {
+      res.status(400);
+      throw new Error(`${name} melebihi batas stock,ubah jumlah produk`);
+    }
 
     const singleProduct = {
       name,
       quantity: cart.quantity,
       price,
+      stock,
       product: _id,
     };
 
@@ -123,39 +129,46 @@ export const handlerNotification = asyncHandler(async (req, res) => {
   let transactionStatus = statusResponse.transaction_status;
   let fraudStatus = statusResponse.fraud_status;
 
-  const orderData = await Order.findOne({ _id: orderId });
+  const orderData = await Order.findById({ orderId });
+
   if (!orderData) {
     res.status(400);
     throw new Error("order tidak ditemukan");
   }
 
-  if (transactionStatus == "capture") {
-    if (fraudStatus == "accept") {
-      const orderProduct = orderData.cartItem;
-      for (const itemProduct of orderProduct) {
-        const productData = await Product.findById(itemProduct.product);
+  const orderProduct = orderData.cartItem;
+  const updateStock = async (itemProduct) => {
+    const productData = await Product.findById(itemProduct.product);
 
-        if (!productData) {
-          res.status(400);
-          throw new Error("order tidak ditemukan");
-        }
-
-        productData.stock = productData.stock - itemProduct.quantity;
-        await productData.save();
-      }
-      orderData.status = "success";
+    if (!productData) {
+      res.status(400);
+      throw new Error("Product not found");
     }
-  } else if (transactionStatus == "settlement") {
-    orderData.status = "success";
-  } else if (
-    transactionStatus == "cancle" ||
-    transactionStatus == "deny" ||
-    transactionStatus == "expire"
-  ) {
-    orderData.status = "failed";
-  } else if (transactionStatus == "pending") {
-    orderData.status = "pending";
-  }
+
+    productData.stock -= itemProduct.quantity;
+
+    await productData.save();
+  };
+
+  const handleTransaction = async () => {
+    if (transactionStatus === "capture" && fraudStatus === "accept") {
+      // Process successful payment
+      await Promise.all(orderProduct.map(updateStock));
+      orderData.status = "success";
+    } else if (transactionStatus === "settlement") {
+      // Process settlement
+      await Promise.all(orderProduct.map(updateStock));
+      orderData.status = "success";
+    } else if (["cancel", "deny", "expire"].includes(transactionStatus)) {
+      // Handle failure statuses
+      orderData.status = "failed";
+    } else if (transactionStatus === "pending") {
+      // Handle pending status
+      orderData.status = "pending";
+    }
+  };
+
+  await handleTransaction();
   await orderData.save();
 
   return res.status(200).send("Payment notification is success!");

@@ -15,12 +15,7 @@ const router = express.Router();
 
 router.get("/", protectMiddleware, roleMiddleware("owner"), getOrder);
 router.post("/", protectMiddleware, createOrder);
-router.get(
-  "/current",
-  protectMiddleware,
-  roleMiddleware("owner"),
-  currentUserOrder
-);
+router.get("/current", protectMiddleware, currentUserOrder);
 router.get("/:id", protectMiddleware, roleMiddleware("owner"), detailOrder);
 router.post("/callback/midtrans", handlerNotification);
 
